@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>POC - Awesome Near Game</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/near-api-js@0.41.0/dist/near-api-js.min.js"></script>
+    <script src="./data.js"></script>
+
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body class="antialiased bg-gradient">
+    <div class="container mx-auto mt-40">
+        <div x-data x-show="!$store.auth.signed" class="">
+            <h3 class="text-gray-100 font-bold text-6xl">AwesomeNearGame</h3>
+            <p class="text-gray-100 text-lg"> <span class="text-red-400 text-4xl">Proof of Concept</span> by Lyudmil
+                Ivanov
+            </p>
+            <button @click="$store.auth.sign_in()"
+                class="bg-slate-800 py-3 px-4 font-bold text-white border-2 border-slate-800 mt-3 hover:border-slate-900">
+                Connect with Near Testnet
+            </button>
+            <hr class="mt-10">
+        </div>
+
+        <!-- GAME -->
+        <div class="" x-data="$store.game">
+
+            <!-- NEW GAME BUTTON -->
+            <div x-show="!$store.game.started && $store.auth.signed">
+                <div x-data="scores" class="text-gray-100">
+                    <h3 class="text-gray-100 text-4xl">Your current overall score is: <span class="font-bold text-6xl"
+                            x-text="$store.auth.signed ? get_user_score : ''"></span> <span
+                            class="text-2xl">ANtokens</span></h3>
+                </div>
+                <button @click="$store.game.newGame(0)"
+                    class="bg-slate-800 py-3 px-4 font-bold text-white border-2 border-slate-800 mt-3 hover:border-slate-900">
+                    Start New Logo Quiz
+                </button>
+                <button @click="$store.game.newGame(1)"
+                    class="bg-slate-800 py-3 px-4 font-bold text-white border-2 border-slate-800 mt-3 hover:border-slate-900">
+                    Start New Oneliner Quiz
+                </button>
+
+                <!-- TODO REMOVE BR-->
+                <br>
+                <button @click="$store.auth.sign_out()" x-show="$store.auth.signed"
+                    class="bg-red-400 py-1 px-2 font-bold text-xs text-slate-900 mt-3">Disconnect</button>
+
+                <div class="mt-10">
+                    <h3 class="text-gray-100 text-4xl">Scoreboard</h3>
+                    <hr class="mt-1">
+
+                    <ul class="flex flex-col text-gray-100 text-xl mt-4">
+                        <template x-for="c in $store.game.get_overall_scores">
+                            <li class="w-fit bg-slate-800 odd:bg-transparent px-2 py-1">
+                                <span x-text="c.accountId"></span>
+                                <span class="font-bold"><span x-text="c.amount"></span>ANt</span>
+                            </li>
+                        </template>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- GAME -->
+            <div x-show="started">
+                <!-- FINISHED -->
+                <div x-show="finished" class="" x-transition>
+
+                    <div class="bg-gray-100 px-6 py-6">
+                        <h3 class="text-6xl bold text-slate-700 font-bold">GAME OVER!</h3>
+                        <p class="text-4xl mt-4">You gave <span x-text="guesses.filter(Boolean).length"></span>
+                            correct
+                            answers
+                        </p>
+                        <p x-data="scores">Your previous overall score <span
+                                x-text="$store.auth.signed ? get_user_score : ''"></span>
+                        </p>
+                        <p class="text-red-600 font-bold text-4xl" x-text="message"></p>
+                        <div class="flex justify-end">
+                            <button @click="newGame($store.game.gameType)"
+                                class="rounded-lg text-white text-xl  border border-gray-100 hover:bg-slate-800 bg-slate-700 px-6 py-4">Try
+                                Again
+                            </button>
+                        </div>
+                    </div>
+
+                </div>
+
+
+                <div x-show="!finished">
+                    <!-- Question -->
+                    <div>
+                        <div class="text-gray-100 text-center">
+                            <div class="flex justify-between items-baseline">
+                                <h3 class="text-4xl font-bold mb-4">Question:
+                                    <span x-text="currentQuestion + 1" class="text-3xl"></span>/<span
+                                        x-text="questions.length"></span>
+                                </h3>
+                                <!-- TIMER -->
+                                <div class="text-center font-bold text-red-500 ">
+                                    <p class="mt-3 text-6xl" x-text="secondsLeft" x-init="startTimer()"></p>
+                                </div>
+                            </div>
+
+                            <!-- Q CARDS -->
+                            <template x-if="gameType === 0">
+                                <div class="backlit bg-slate-700 border border-gray-100 mx-auto h-64 w-40">
+                                    <img :src="questions[currentQuestion].question.logo" alt="Guess me!"
+                                        class="h-24 mx-auto mt-16">
+                                </div>
+                            </template>
+
+                            <template x-if="gameType === 1">
+                                <div class="bg-slate-800 font-bold py-4 px-4 backlit">
+                                    <span x-text="questions[currentQuestion].question.oneliner"></span>
+                                </div>
+                            </template>
+                        </div>
+
+                        <!-- Answers -->
+                        <div class="flex flex-wrap basis-auto mt-10">
+                            <template x-for="answer in questions[currentQuestion].answers">
+                                <div class="w-1/2 py-1 px-1">
+                                    <button
+                                        class="rounded-lg border-2 border-black bg-slate-300 px-10 py-4 hover:bg-slate-400 w-full"
+                                        x-text="answer.title" @click="guessAnswer(answer.correct)"></button>
+                                </div>
+
+                            </template>
+                        </div>
+                    </div>
+                    <!-- GUESSES LIST SCORE...-->
+                    <ul class="flex">
+                        <template x-for="guess in guesses">
+                            <li>
+                                <div class="h-2 mr-4 w-20 rounded inline-block"
+                                    :class="guess ? 'bg-green-600' : 'bg-red-600'">
+                                </div>
+                            </li>
+                        </template>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="./script.js"></script>
+</body>
+
+
+</html>
